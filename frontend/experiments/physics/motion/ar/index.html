@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beautiful Free Fall Simulation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+            height: 100vh;
+        }
+
+        canvas {
+            display: block;
+            background: linear-gradient(180deg, 
+                #87CEEB 0%, 
+                #98D8E8 30%, 
+                #B0E0E6 60%, 
+                #E0F6FF 100%);
+            cursor: pointer;
+        }
+
+        .controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .control-group {
+            margin-bottom: 10px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        input[type="range"] {
+            width: 150px;
+            margin-right: 10px;
+        }
+
+        button {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px;
+            transition: transform 0.2s;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+        }
+
+        .info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: monospace;
+            min-width: 200px;
+        }
+
+        .ground {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 50px;
+            background: linear-gradient(180deg, #8B4513 0%, #654321 100%);
+            border-top: 3px solid #A0522D;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .ground-text {
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+            font-family: 'Arial', sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="ground">
+        <span class="ground-text">LearnSphere</span>
+    </div>
+    
+/contact
+    <div class="controls">
+        <div class="control-group">
+            <label>Mass: <span id="massValue">8</span> kg</label>
+            <input type="range" id="mass" min="1" max="20" value="8">
+        </div>
+        <div class="control-group">
+            <label>Gravity: <span id="gravityValue">9.8</span> m/s²</label>
+            <input type="range" id="gravity" min="1" max="20" value="9.8" step="0.1">
+        </div>
+        <div class="control-group">
+            <label>Air Resistance: <span id="airResValue">0.01</span></label>
+            <input type="range" id="airRes" min="0" max="0.1" value="0.01" step="0.001">
+        </div>
+        <button onclick="resetSimulation()">Reset</button>
+        <button onclick="togglePause()">Pause/Play</button>
+    </div>
+
+    <div class="info">
+        <div>Time: <span id="time">0.00</span>s</div>
+        <div>Velocity: <span id="velocity">0.00</span> m/s</div>
+        <div>Height: <span id="height">0.00</span> m</div>
+        <div>Kinetic Energy: <span id="kinetic">0.00</span> J</div>
+        <div>Potential Energy: <span id="potential">0.00</span> J</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight - 50; // Account for ground
+
+        let animationId;
+        let isPaused = false;
+        let startTime = Date.now();
+
+        // Physics variables
+        let ball = {
+            x: canvas.width / 2,
+            y: 50,
+            radius: 0,
+            mass: 8,
+            velocity: 0,
+            gravity: 9.8,
+            airResistance: 0.01,
+            color: '#FF6B6B',
+            trail: [],
+            rotation: 0
+        };
+
+        let particles = [];
+
+        // Control elements
+        const massSlider = document.getElementById('mass');
+        const gravitySlider = document.getElementById('gravity');
+        const airResSlider = document.getElementById('airRes');
+
+        // Update displays
+        function updateControls() {
+            document.getElementById('massValue').textContent = massSlider.value;
+            document.getElementById('gravityValue').textContent = gravitySlider.value;
+            document.getElementById('airResValue').textContent = airResSlider.value;
+            
+            ball.mass = parseFloat(massSlider.value);
+            ball.gravity = parseFloat(gravitySlider.value);
+            ball.airResistance = parseFloat(airResSlider.value);
+            ball.radius = Math.max(40, ball.mass * 4);
+        }
+
+        massSlider.addEventListener('input', updateControls);
+        gravitySlider.addEventListener('input', updateControls);
+        airResSlider.addEventListener('input', updateControls);
+
+        // Particle system for effects
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = (Math.random() - 0.5) * 4;
+                this.life = 1;
+                this.decay = 0.02;
+                this.size = Math.random() * 3 + 1;
+                this.color = `hsl(${Math.random() * 60 + 15}, 70%, 60%)`;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.1; // gravity for particles
+                this.life -= this.decay;
+                this.size *= 0.99;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        function createParticles(x, y, count = 10) {
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(x, y));
+            }
+        }
+
+        function drawBall() {
+            ctx.save();
+
+            // Shadow
+            ctx.globalAlpha = 0.3;
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(ball.x + 3, ball.y + 3, ball.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+
+            // Ball gradient
+            const gradient = ctx.createRadialGradient(
+                ball.x - ball.radius/3, ball.y - ball.radius/3, 0,
+                ball.x, ball.y, ball.radius
+            );
+            gradient.addColorStop(0, '#FFE5E5');
+            gradient.addColorStop(0.7, ball.color);
+            gradient.addColorStop(1, '#CC5555');
+
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Highlight
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.beginPath();
+            ctx.arc(ball.x - ball.radius/3, ball.y - ball.radius/3, ball.radius/4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Motion blur effect
+            if (ball.velocity > 5) {
+                ctx.globalAlpha = 0.3;
+                for (let i = 1; i <= 3; i++) {
+                    ctx.fillStyle = ball.color;
+                    ctx.beginPath();
+                    ctx.arc(ball.x, ball.y - i * 5, ball.radius * (1 - i * 0.1), 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            ctx.restore();
+        }
+
+        function drawTrail() {
+            for (let i = 0; i < ball.trail.length; i++) {
+                const point = ball.trail[i];
+                const alpha = (i / ball.trail.length) * 0.5;
+                const size = ball.radius * alpha;
+                
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = ball.color;
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        function updatePhysics(deltaTime) {
+            if (ball.y >= canvas.height - ball.radius - 50) {
+                // Hit ground
+                if (ball.velocity > 5) {
+                    createParticles(ball.x, ball.y, 15);
+                }
+                ball.velocity *= -0.7; // Bounce with energy loss
+                ball.y = canvas.height - ball.radius - 50;
+                return;
+            }
+
+            // Air resistance force
+            const airResistanceForce = ball.airResistance * ball.velocity * ball.velocity;
+            const netForce = ball.mass * ball.gravity - airResistanceForce;
+            const acceleration = netForce / ball.mass;
+            
+            ball.velocity += acceleration * deltaTime;
+            ball.y += ball.velocity * deltaTime;
+
+            // Add rotation based on velocity (for ball)
+            ball.rotation += ball.velocity * 0.005;
+
+            // Add to trail
+            ball.trail.push({x: ball.x, y: ball.y});
+            if (ball.trail.length > 20) {
+                ball.trail.shift();
+            }
+        }
+
+        function updateInfo(deltaTime) {
+            const currentTime = (Date.now() - startTime) / 1000;
+            const height = Math.max(0, (canvas.height - 50 - ball.y) / 10); // Convert to meters
+            const kineticEnergy = 0.5 * ball.mass * ball.velocity * ball.velocity / 100;
+            const potentialEnergy = ball.mass * ball.gravity * height;
+
+            document.getElementById('time').textContent = currentTime.toFixed(2);
+            document.getElementById('velocity').textContent = ball.velocity.toFixed(2);
+            document.getElementById('height').textContent = height.toFixed(2);
+            document.getElementById('kinetic').textContent = kineticEnergy.toFixed(2);
+            document.getElementById('potential').textContent = potentialEnergy.toFixed(2);
+        }
+
+        function drawClouds() {
+            ctx.save();
+            ctx.globalAlpha = 0.6;
+            
+            for (let i = 0; i < 5; i++) {
+                const x = (i * 200 + Date.now() * 0.01) % (canvas.width + 100);
+                const y = 50 + i * 30;
+                
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(x, y, 20, 0, Math.PI * 2);
+                ctx.arc(x + 25, y, 25, 0, Math.PI * 2);
+                ctx.arc(x + 50, y, 20, 0, Math.PI * 2);
+                ctx.arc(x + 25, y - 15, 20, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        function animate() {
+            if (!isPaused) {
+                const deltaTime = 0.016; // 60fps
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                drawClouds();
+                drawTrail();
+                drawBall();
+                
+                // Update and draw particles
+                particles = particles.filter(particle => {
+                    particle.update();
+                    particle.draw();
+                    return particle.life > 0;
+                });
+                
+                updatePhysics(deltaTime);
+                updateInfo(deltaTime);
+            }
+            
+            animationId = requestAnimationFrame(animate);
+        }
+
+        function resetSimulation() {
+            ball.y = 50;
+            ball.velocity = 0;
+            ball.rotation = 0;
+            ball.trail = [];
+            particles = [];
+            startTime = Date.now();
+            updateControls();
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            if (!isPaused) {
+                startTime = Date.now() - parseFloat(document.getElementById('time').textContent) * 1000;
+            }
+        }
+
+        // Click to drop ball at mouse position
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            ball.x = e.clientX - rect.left;
+            ball.y = e.clientY - rect.top;
+            ball.velocity = 0;
+            ball.rotation = 0;
+            ball.trail = [];
+            startTime = Date.now();
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight - 50;
+        });
+
+        // Initialize
+        updateControls();
+        animate();
+    </script>
+</body>
+</html>

@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beautiful Pendulum - Physics Simulation</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        .title {
+            color: white;
+            font-size: 3em;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.4);
+            text-align: center;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.2em;
+            font-weight: 300;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .nav-link {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: rgba(255,255,255,0.2);
+            color: white;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background-color 0.3s;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(255,255,255,0.4);
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 30px;
+            padding: 40px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.2);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.3);
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .pendulum-area {
+            position: relative;
+            height: 500px;
+            margin: 40px 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            background: linear-gradient(180deg, #e3f2fd 0%, #f8f9fa 100%);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: inset 0 4px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .pivot {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, #FFD700, #FFA500);
+            border-radius: 50%;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            z-index: 10;
+            border: 3px solid #DAA520;
+        }
+
+        .string {
+            position: absolute;
+            top: 30px;
+            left: 50%;
+            width: 2px;
+            background: linear-gradient(to bottom, #333, #666);
+            transform-origin: top center;
+            z-index: 1;
+            border-radius: 1px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .pendulum-bob {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #FF6B6B, #FF8E8E, #FF6B6B);
+            border-radius: 50%;
+            cursor: grab;
+            transform-origin: center center;
+            z-index: 5;
+            box-shadow: 
+                0 8px 16px rgba(0,0,0,0.3),
+                inset 0 4px 8px rgba(255,255,255,0.3),
+                inset 0 -4px 8px rgba(0,0,0,0.2);
+            border: 3px solid rgba(255,255,255,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            transition: transform 0.1s ease;
+        }
+
+        .pendulum-bob::before {
+            content: '';
+            position: absolute;
+            top: 15%;
+            left: 25%;
+            width: 25%;
+            height: 25%;
+            background: rgba(255,255,255,0.4);
+            border-radius: 50%;
+            filter: blur(4px);
+        }
+
+        .pendulum-bob:hover {
+            transform: scale(1.05);
+            filter: brightness(1.1);
+        }
+
+        .pendulum-bob:active {
+            cursor: grabbing;
+        }
+
+        .pendulum-bob.dragging {
+            z-index: 1000;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+
+        .trail {
+            position: absolute;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .trail-point {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 107, 107, 0.6);
+            border-radius: 50%;
+            transition: opacity 0.1s ease;
+        }
+
+        .controls-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+            padding: 30px;
+            background: linear-gradient(135deg, rgba(240, 248, 255, 0.8), rgba(230, 244, 255, 0.9));
+            border-radius: 25px;
+            border: 3px dashed #4682B4;
+            box-shadow: inset 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .control-group {
+            background: linear-gradient(135deg, white, #f8f9fa);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.5);
+            transition: transform 0.3s ease;
+        }
+
+        .control-group:hover {
+            transform: translateY(-2px);
+        }
+
+        .control-label {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #2c3e50;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .slider-container {
+            margin-bottom: 15px;
+        }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: linear-gradient(to right, #ddd, #ccc);
+            outline: none;
+            -webkit-appearance: none;
+            margin: 10px 0;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .slider-value {
+            text-align: center;
+            font-weight: 600;
+            font-size: 1.1em;
+            color: #3498db;
+            margin-top: 5px;
+        }
+
+        .info-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+            padding: 25px;
+            background: linear-gradient(135deg, rgba(240, 248, 255, 0.6), rgba(230, 244, 255, 0.8));
+            border-radius: 20px;
+            box-shadow: inset 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .info-card {
+            background: linear-gradient(135deg, white, #f8f9fa);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.5);
+            transition: transform 0.3s ease;
+        }
+
+        .info-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .info-title {
+            font-size: 1em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #2c3e50;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .info-value {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #3498db;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .control-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 30px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        .btn.play {
+            background: linear-gradient(135deg, #4CAF50, #66BB6A);
+        }
+
+        .btn.pause {
+            background: linear-gradient(135deg, #FF9800, #FFB74D);
+        }
+
+        .btn.reset {
+            background: linear-gradient(135deg, #FF6B6B, #FF8E8E);
+        }
+
+        .instructions {
+            background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(248,249,250,0.9));
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .instructions h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .instructions p {
+            color: #5a6c7d;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .mass-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .mass-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            color: white;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .mass-btn.active {
+            transform: scale(1.1);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+
+        .mass-1kg { background: linear-gradient(135deg, #FF6B6B, #FF8E8E); }
+        .mass-2kg { background: linear-gradient(135deg, #4ECDC4, #7FDBDA); }
+        .mass-3kg { background: linear-gradient(135deg, #45B7D1, #6CC8E0); }
+        .mass-5kg { background: linear-gradient(135deg, #96CEB4, #AEDCC0); }
+        .mass-10kg { background: linear-gradient(135deg, #FFEAA7, #FDCB6E); }
+
+        @media (max-width: 768px) {
+            .pendulum-area {
+                height: 400px;
+            }
+            
+            .title {
+                font-size: 2.2em;
+            }
+            
+            .controls-panel {
+                grid-template-columns: 1fr;
+            }
+            
+            .control-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1 class="title">🏀 Pendulum</h1>
+    <h2 class="subtitle">An Interactive Physics Simulation</h2>
+    
+    <div class="container">
+        <div class="instructions">
+            <h3>🎯 How to Use</h3>
+            <p>🖱️ <strong>Drag the pendulum bob</strong> to set the initial angle and release to start swinging!</p>
+            <p>⚙️ <strong>Adjust parameters</strong> like length, mass, and gravity to see how they affect the motion.</p>
+            <p>📊 <strong>Watch real-time data</strong> including period, frequency, and energy as the pendulum swings.</p>
+            <p>🎨 <strong>Enable trail mode</strong> to visualize the pendulum's path through space!</p>
+        </div>
+
+        <div class="pendulum-area" id="pendulumArea">
+            <div class="pivot" id="pivot"></div>
+            <div class="string" id="string"></div>
+            <div class="pendulum-bob" id="pendulumBob"></div>
+            <div class="trail" id="trail"></div>
+        </div>
+
+        <div class="controls-panel">
+            <div class="control-group">
+                <div class="control-label">📏 Length</div>
+                <div class="slider-container">
+                    <input type="range" min="100" max="400" value="250" class="slider" id="lengthSlider">
+                    <div class="slider-value" id="lengthValue">250 cm</div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">⚖️ Mass</div>
+                <div class="mass-buttons">
+                    <button class="mass-btn mass-1kg" data-mass="1">1kg</button>
+                    <button class="mass-btn mass-2kg" data-mass="2">2kg</button>
+                    <button class="mass-btn mass-3kg active" data-mass="3">3kg</button>
+                    <button class="mass-btn mass-5kg" data-mass="5">5kg</button>
+                    <button class="mass-btn mass-10kg" data-mass="10">10kg</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">🌍 Gravity</div>
+                <div class="slider-container">
+                    <input type="range" min="1" max="20" step="0.1" value="9.8" class="slider" id="gravitySlider">
+                    <div class="slider-value" id="gravityValue">9.8 m/s²</div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">🎨 Damping</div>
+                <div class="slider-container">
+                    <input type="range" min="0" max="0.02" step="0.001" value="0.005" class="slider" id="dampingSlider">
+                    <div class="slider-value" id="dampingValue">0.005</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <div class="info-card">
+                <div class="info-title">⏱️ Period</div>
+                <div class="info-value" id="periodValue">0.0 s</div>
+            </div>
+            <div class="info-card">
+                <div class="info-title">🔄 Frequency</div>
+                <div class="info-value" id="frequencyValue">0.0 Hz</div>
+            </div>
+            <div class="info-card">
+                <div class="info-title">📐 Angle</div>
+                <div class="info-value" id="angleValue">0°</div>
+            </div>
+            <div class="info-card">
+                <div class="info-title">⚡ Energy</div>
+                <div class="info-value" id="energyValue">0.0 J</div>
+            </div>
+        </div>
+
+        <div class="control-buttons">
+            <button class="btn play" id="playBtn">▶️ Start</button>
+            <button class="btn pause" id="pauseBtn">⏸️ Pause</button>
+            <button class="btn reset" id="resetBtn">🔄 Reset</button>
+            <button class="btn" id="trailBtn">🎨 Toggle Trail</button>
+        </div>
+    </div>
+
+    <script>
+        class PendulumSimulation {
+            constructor() {
+                this.canvas = null;
+                this.pendulumArea = document.getElementById('pendulumArea');
+                this.pendulumBob = document.getElementById('pendulumBob');
+                this.string = document.getElementById('string');
+                this.pivot = document.getElementById('pivot');
+                this.trail = document.getElementById('trail');
+                
+                // Physics parameters
+                this.length = 2.5; // meters (250cm)
+                this.mass = 3; // kg
+                this.gravity = 9.8; // m/s²
+                this.damping = 0.005;
+                
+                // State variables
+                this.angle = 0; // radians
+                this.angularVelocity = 0;
+                this.angularAcceleration = 0;
+                
+                // Animation
+                this.isRunning = false;
+                this.lastTime = 0;
+                this.animationId = null;
+                
+                // Trail
+                this.showTrail = false;
+                this.trailPoints = [];
+                this.maxTrailPoints = 100;
+                
+                // Period measurement
+                this.lastCrossTime = 0;
+                this.period = 0;
+                this.crossings = [];
+                
+                // Dragging
+                this.isDragging = false;
+                this.dragStartTime = 0;
+                
+                this.initEventListeners();
+                this.updateDisplay();
+                this.updatePendulumPosition();
+            }
+
+            initEventListeners() {
+                // Sliders
+                document.getElementById('lengthSlider').addEventListener('input', (e) => {
+                    this.length = parseInt(e.target.value) / 100; // Convert cm to m
+                    document.getElementById('lengthValue').textContent = e.target.value + ' cm';
+                    this.updatePendulumPosition();
+                });
+
+                document.getElementById('gravitySlider').addEventListener('input', (e) => {
+                    this.gravity = parseFloat(e.target.value);
+                    document.getElementById('gravityValue').textContent = e.target.value + ' m/s²';
+                });
+
+                document.getElementById('dampingSlider').addEventListener('input', (e) => {
+                    this.damping = parseFloat(e.target.value);
+                    document.getElementById('dampingValue').textContent = e.target.value;
+                });
+
+                // Mass buttons
+                document.querySelectorAll('.mass-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.mass-btn').forEach(b => b.classList.remove('active'));
+                        e.target.classList.add('active');
+                        this.mass = parseInt(e.target.dataset.mass);
+                        this.updateBobAppearance();
+                    });
+                });
+
+                // Control buttons
+                document.getElementById('playBtn').addEventListener('click', () => this.start());
+                document.getElementById('pauseBtn').addEventListener('click', () => this.pause());
+                document.getElementById('resetBtn').addEventListener('click', () => this.reset());
+                document.getElementById('trailBtn').addEventListener('click', () => this.toggleTrail());
+
+                // Dragging
+                this.pendulumBob.addEventListener('mousedown', this.startDrag.bind(this));
+                this.pendulumBob.addEventListener('touchstart', this.startDrag.bind(this), { passive: false });
+                
+                document.addEventListener('mousemove', this.drag.bind(this));
+                document.addEventListener('touchmove', this.drag.bind(this), { passive: false });
+                
+                document.addEventListener('mouseup', this.endDrag.bind(this));
+                document.addEventListener('touchend', this.endDrag.bind(this));
+
+                // Resize
+                window.addEventListener('resize', () => this.updatePendulumPosition());
+            }
+
+            startDrag(e) {
+                e.preventDefault();
+                this.isDragging = true;
+                this.dragStartTime = performance.now();
+                this.pause();
+                this.pendulumBob.classList.add('dragging');
+                
+                const rect = this.pendulumArea.getBoundingClientRect();
+                this.dragOffset = {
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + 30 // Pivot position
+                };
+            }
+
+            drag(e) {
+                if (!this.isDragging) return;
+                e.preventDefault();
+
+                const clientX = e.clientX || e.touches[0].clientX;
+                const clientY = e.clientY || e.touches[0].clientY;
+                
+                const deltaX = clientX - this.dragOffset.x;
+                const deltaY = clientY - this.dragOffset.y;
+                
+                // Calculate angle from vertical (fixed to ensure proper pendulum motion)
+                let newAngle = Math.atan2(deltaX, deltaY);
+                
+                // Clamp angle to reasonable pendulum range (-π to π)
+                if (newAngle > Math.PI) newAngle = Math.PI;
+                if (newAngle < -Math.PI) newAngle = -Math.PI;
+                
+                // Ensure the bob stays below the pivot point (positive y component)
+                if (deltaY < 0) {
+                    // If dragged above pivot, constrain to horizontal at most
+                    newAngle = deltaX > 0 ? Math.PI / 2 : -Math.PI / 2;
+                }
+                
+                this.angle = newAngle;
+                this.angularVelocity = 0;
+                
+                this.updatePendulumPosition();
+                this.updateDisplay();
+            }
+
+            endDrag(e) {
+                if (!this.isDragging) return;
+                
+                this.isDragging = false;
+                this.pendulumBob.classList.remove('dragging');
+                
+                // Auto-start if dragged for less than 200ms (quick release)
+                const dragDuration = performance.now() - this.dragStartTime;
+                if (dragDuration < 200 && Math.abs(this.angle) > 0.1) {
+                    this.start();
+                }
+            }
+
+            updateBobAppearance() {
+                const massClasses = ['mass-1kg', 'mass-2kg', 'mass-3kg', 'mass-5kg', 'mass-10kg'];
+                massClasses.forEach(cls => this.pendulumBob.classList.remove(cls));
+                
+                if (this.mass === 1) this.pendulumBob.classList.add('mass-1kg');
+                else if (this.mass === 2) this.pendulumBob.classList.add('mass-2kg');
+                else if (this.mass === 3) this.pendulumBob.classList.add('mass-3kg');
+                else if (this.mass === 5) this.pendulumBob.classList.add('mass-5kg');
+                else if (this.mass === 10) this.pendulumBob.classList.add('mass-10kg');
+                
+                this.pendulumBob.textContent = this.mass + 'kg';
+                
+                // Adjust size based on mass
+                const size = Math.max(40, Math.min(80, 40 + this.mass * 4));
+                this.pendulumBob.style.width = size + 'px';
+                this.pendulumBob.style.height = size + 'px';
+                this.pendulumBob.style.fontSize = (size / 60) + 'em';
+            }
+
+            updatePendulumPosition() {
+                const lengthPixels = this.length * 100; // Convert m to pixels (1m = 100px)
+                
+                // Update string length
+                this.string.style.height = lengthPixels + 'px';
+                this.string.style.transform = `translateX(-50%) rotate(${this.angle}rad)`;
+                
+                // Update bob position
+                const x = Math.sin(this.angle) * lengthPixels;
+                const y = Math.cos(this.angle) * lengthPixels + 30; // 30px offset for pivot
+                
+                this.pendulumBob.style.left = `calc(50% + ${x}px)`;
+                this.pendulumBob.style.top = y + 'px';
+                this.pendulumBob.style.transform = 'translate(-50%, -50%)';
+                
+                // Add trail point if running and trail is enabled
+                if (this.showTrail && this.isRunning) {
+                    this.addTrailPoint(x, y);
+                }
+            }
+
+            addTrailPoint(x, y) {
+                const trailPoint = document.createElement('div');
+                trailPoint.className = 'trail-point';
+                trailPoint.style.left = `calc(50% + ${x}px)`;
+                trailPoint.style.top = y + 'px';
+                trailPoint.style.transform = 'translateX(-50%)';
+                
+                this.trail.appendChild(trailPoint);
+                this.trailPoints.push(trailPoint);
+                
+                // Remove old trail points
+                if (this.trailPoints.length > this.maxTrailPoints) {
+                    const oldPoint = this.trailPoints.shift();
+                    oldPoint.remove();
+                }
+                
+                // Fade out trail points
+                this.trailPoints.forEach((point, index) => {
+                    const opacity = (index + 1) / this.trailPoints.length * 0.8;
+                    point.style.opacity = opacity;
+                });
+            }
+
+            clearTrail() {
+                this.trailPoints.forEach(point => point.remove());
+                this.trailPoints = [];
+            }
+
+            calculatePhysics(deltaTime) {
+                if (this.isDragging) return;
+                
+                // Simple pendulum equation: angular acceleration = -(g/L) * sin(θ) - damping * angular velocity
+                this.angularAcceleration = -(this.gravity / this.length) * Math.sin(this.angle) - this.damping * this.angularVelocity;
+                
+                // Update velocity and position
+                this.angularVelocity += this.angularAcceleration * deltaTime;
+                this.angle += this.angularVelocity * deltaTime;
+                
+                // Detect zero crossings for period measurement (improved detection)
+                const previousAngle = this.angle - this.angularVelocity * deltaTime;
+                if ((previousAngle <= 0 && this.angle > 0) || (previousAngle >= 0 && this.angle < 0)) {
+                    const currentTime = performance.now();
+                    if (this.lastCrossTime > 0) {
+                        const halfPeriod = (currentTime - this.lastCrossTime) / 1000;
+                        const fullPeriod = halfPeriod * 2;
+                        this.crossings.push(fullPeriod);
+                        if (this.crossings.length > 5) this.crossings.shift();
+                        this.period = this.crossings.reduce((a, b) => a + b, 0) / this.crossings.length;
+                    }
+                    this.lastCrossTime = currentTime;
+                }
+            }
+
+            updateDisplay() {
+                // Period and frequency
+                document.getElementById('periodValue').textContent = this.period.toFixed(2) + ' s';
+                document.getElementById('frequencyValue').textContent = this.period > 0 ? (1 / this.period).toFixed(2) + ' Hz' : '0.0 Hz';
+                
+                // Angle
+                const angleDegrees = this.angle * 180 / Math.PI;
+                document.getElementById('angleValue').textContent = angleDegrees.toFixed(1) + '°';
+                
+                // Energy (simplified calculation)
+                const height = this.length * (1 - Math.cos(this.angle));
+                const potentialEnergy = this.mass * this.gravity * height;
+                const kineticEnergy = 0.5 * this.mass * Math.pow(this.angularVelocity * this.length, 2);
+                const totalEnergy = potentialEnergy + kineticEnergy;
+                document.getElementById('energyValue').textContent = totalEnergy.toFixed(1) + ' J';
+            }
+
+            animate(currentTime) {
+                if (!this.isRunning) return;
+                
+                const deltaTime = this.lastTime ? (currentTime - this.lastTime) / 1000 : 0;
+                this.lastTime = currentTime;
+                
+                if (deltaTime < 0.1) { // Prevent large jumps
+                    this.calculatePhysics(deltaTime);
+                    this.updatePendulumPosition();
+                    this.updateDisplay();
+                }
+                
+                this.animationId = requestAnimationFrame(this.animate.bind(this));
+            }
+
+            start() {
+                if (!this.isRunning) {
+                    this.isRunning = true;
+                    this.lastTime = 0;
+                    this.animate(performance.now());
+                    
+                    document.getElementById('playBtn').textContent = '⏸️ Running';
+                    document.getElementById('playBtn').style.background = 'linear-gradient(135deg, #FF9800, #FFB74D)';
+                }
+            }
+
+            pause() {
+                this.isRunning = false;
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                    this.animationId = null;
+                }
+                
+                document.getElementById('playBtn').textContent = '▶️ Start';
+                document.getElementById('playBtn').style.background = 'linear-gradient(135deg, #4CAF50, #66BB6A)';
+            }
+
+            reset() {
+                this.pause();
+                this.angle = 0;
+                this.angularVelocity = 0;
+                this.angularAcceleration = 0;
+                this.period = 0;
+                this.crossings = [];
+                this.lastCrossTime = 0;
+                this.clearTrail();
+                this.updatePendulumPosition();
+                this.updateDisplay();
+            }
+
+            toggleTrail() {
+                this.showTrail = !this.showTrail;
+                const trailBtn = document.getElementById('trailBtn');
+                
+                if (this.showTrail) {
+                    trailBtn.textContent = '🎨 Trail ON';
+                    trailBtn.style.background = 'linear-gradient(135deg, #4CAF50, #66BB6A)';
+                } else {
+                    trailBtn.textContent = '🎨 Trail OFF';
+                    trailBtn.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
+                    this.clearTrail();
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            new PendulumSimulation();
+        });
+    </script>
+</body>
+</html>

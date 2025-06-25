@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Equilibrium Simulation</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        .title {
+            color: white;
+            font-size: 3em;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.4);
+            text-align: center;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.2em;
+            font-weight: 300;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 30px;
+            padding: 40px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.2);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.3);
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .balance-area {
+            position: relative;
+            height: 500px;
+            margin: 40px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(180deg, #e3f2fd 0%, #f8f9fa 100%);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: inset 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .fulcrum {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 40px solid transparent;
+            border-right: 40px solid transparent;
+            border-bottom: 80px solid #8B4513;
+            z-index: 1;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+        }
+
+        .fulcrum::before {
+            content: '';
+            position: absolute;
+            bottom: -80px;
+            left: -40px;
+            width: 80px;
+            height: 20px;
+            background: linear-gradient(45deg, #654321, #8B4513);
+            border-radius: 0 0 10px 10px;
+        }
+
+        .beam {
+            position: absolute;
+            width: 700px;
+            height: 16px;
+            background: linear-gradient(45deg, #C0C0C0, #E8E8E8, #C0C0C0);
+            border-radius: 8px;
+            bottom: 90px;
+            left: 50%;
+            transform-origin: center center;
+            transform: translateX(-50%) rotate(0deg);
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+            z-index: 2;
+            border: 2px solid #A0A0A0;
+        }
+
+        .beam::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, #FFD700, #FFA500);
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .chain {
+            position: absolute;
+            width: 3px;
+            height: 50px;
+            background: linear-gradient(to bottom, #666, #333);
+            bottom: 106px;
+            border-radius: 2px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .chain-left {
+            left: 140px;
+        }
+
+        .chain-right {
+            right: 140px;
+        }
+
+        .bucket {
+            position: absolute;
+            width: 140px;
+            height: 80px;
+            bottom: 20px;
+            background: linear-gradient(180deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%);
+            border-radius: 0 0 70px 70px;
+            box-shadow: 
+                0 8px 16px rgba(0,0,0,0.3),
+                inset 0 4px 8px rgba(255,255,255,0.3),
+                inset 0 -4px 8px rgba(0,0,0,0.2);
+            transform-origin: top center;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 3px solid #DAA520;
+            z-index: 3;
+        }
+
+        .bucket::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: -3px;
+            right: -3px;
+            height: 12px;
+            background: linear-gradient(90deg, #FFD700, #FFA500, #FFD700);
+            border-radius: 6px;
+            border: 3px solid #DAA520;
+        }
+
+        .bucket::after {
+            content: '';
+            position: absolute;
+            top: -15px;
+            left: 10px;
+            right: 10px;
+            height: 6px;
+            background: #B8860B;
+            border-radius: 3px;
+        }
+
+        .bucket-left {
+            left: 70px;
+        }
+
+        .bucket-right {
+            right: 70px;
+        }
+
+        .drop-zone {
+            position: absolute;
+            width: 140px;
+            height: 80px;
+            bottom: 20px;
+            border: 3px dashed transparent;
+            border-radius: 0 0 70px 70px;
+            transition: all 0.3s ease;
+            z-index: 4;
+        }
+
+        .drop-zone.left {
+            left: 70px;
+        }
+
+        .drop-zone.right {
+            right: 70px;
+        }
+
+        .drop-zone.highlight {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.2);
+            animation: glow 1.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { box-shadow: 0 0 20px rgba(76, 175, 80, 0.4); }
+            to { box-shadow: 0 0 30px rgba(76, 175, 80, 0.8); }
+        }
+
+        .masses-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+            padding: 30px;
+            background: linear-gradient(135deg, rgba(240, 248, 255, 0.8), rgba(230, 244, 255, 0.9));
+            border-radius: 25px;
+            border: 3px dashed #4682B4;
+            box-shadow: inset 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .masses-label {
+            grid-column: 1 / -1;
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .mass {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.1em;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+            position: relative;
+            margin: 0 auto;
+            box-shadow: 
+                0 8px 16px rgba(0,0,0,0.2),
+                inset 0 4px 8px rgba(255,255,255,0.3),
+                inset 0 -4px 8px rgba(0,0,0,0.2);
+            border: 3px solid rgba(255,255,255,0.3);
+        }
+
+        .mass::before {
+            content: '';
+            position: absolute;
+            top: 15%;
+            left: 25%;
+            width: 25%;
+            height: 25%;
+            background: rgba(255,255,255,0.4);
+            border-radius: 50%;
+            filter: blur(4px);
+        }
+
+        .mass:hover {
+            transform: scale(1.15) translateY(-5px);
+            box-shadow: 
+                0 15px 30px rgba(0,0,0,0.4),
+                inset 0 4px 8px rgba(255,255,255,0.4),
+                inset 0 -4px 8px rgba(0,0,0,0.3);
+        }
+
+        .mass:active {
+            cursor: grabbing;
+        }
+
+        .mass.dragging {
+            position: fixed;
+            z-index: 1000;
+            transform: scale(1.3) rotate(5deg);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            pointer-events: none;
+            filter: brightness(1.1);
+        }
+
+        .mass-1kg { background: linear-gradient(135deg, #FF6B6B, #FF8E8E, #FF6B6B); }
+        .mass-2kg { background: linear-gradient(135deg, #4ECDC4, #7FDBDA, #4ECDC4); }
+        .mass-3kg { background: linear-gradient(135deg, #45B7D1, #6CC8E0, #45B7D1); }
+        .mass-5kg { background: linear-gradient(135deg, #96CEB4, #AEDCC0, #96CEB4); }
+        .mass-10kg { background: linear-gradient(135deg, #FFEAA7, #FDCB6E, #FFEAA7); }
+
+        .placed-mass {
+            position: absolute;
+            bottom: 25px;
+            transform: translateX(-50%);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .placed-mass:hover {
+            transform: translateX(-50%) scale(1.1);
+            filter: brightness(1.2);
+        }
+
+        .info-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-top: 30px;
+            padding: 25px;
+            background: linear-gradient(135deg, rgba(240, 248, 255, 0.6), rgba(230, 244, 255, 0.8));
+            border-radius: 20px;
+            box-shadow: inset 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .info-card {
+            background: linear-gradient(135deg, white, #f8f9fa);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.5);
+            transition: transform 0.3s ease;
+        }
+
+        .info-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .info-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #2c3e50;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .info-value {
+            font-size: 2em;
+            font-weight: 700;
+            color: #3498db;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .equilibrium-status {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 20px;
+            border-radius: 15px;
+            font-weight: 600;
+            font-size: 1.3em;
+            transition: all 0.5s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .equilibrium-status.balanced {
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.3), rgba(129, 199, 132, 0.3));
+            color: #2e7d32;
+            animation: celebrate 2s ease-in-out infinite;
+        }
+
+        .equilibrium-status.unbalanced {
+            background: linear-gradient(135deg, rgba(255, 193, 7, 0.3), rgba(255, 213, 79, 0.3));
+            color: #f57f17;
+        }
+
+        @keyframes celebrate {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .control-panel {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 25px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 30px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        .btn.reset {
+            background: linear-gradient(135deg, #FF6B6B, #FF8E8E);
+        }
+
+        .instructions {
+            background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(248,249,250,0.9));
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .instructions h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .instructions p {
+            color: #5a6c7d;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 768px) {
+            .balance-area {
+                height: 400px;
+            }
+            
+            .beam {
+                width: 500px;
+            }
+            
+            .title {
+                font-size: 2.2em;
+            }
+            
+            .masses-container {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .bucket {
+                width: 100px;
+                height: 60px;
+            }
+            
+            .drop-zone {
+                width: 100px;
+                height: 60px;
+            }
+            
+            .bucket-left, .drop-zone.left {
+                left: 50px;
+            }
+            
+            .bucket-right, .drop-zone.right {
+                right: 50px;
+            }
+            
+            .chain-left {
+                left: 100px;
+            }
+            
+            .chain-right {
+                right: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1 class="title">⚖️ Beam Balance</h1>
+    <p class="subtitle">Interactive Physics Simulation - Discover the Magic of Equilibrium</p>
+    
+    <div class="container">
+        <div class="instructions">
+            <h3>🎯 How to Use</h3>
+            <p>Drag and drop the colorful masses into the golden buckets on either side of the balance. Watch the beam tilt and try to achieve perfect equilibrium! Click on masses in the buckets to remove them.</p>
+        </div>
+
+        <div class="balance-area" id="balanceArea">
+            <div class="fulcrum"></div>
+            <div class="beam" id="beam"></div>
+            <div class="chain chain-left"></div>
+            <div class="chain chain-right"></div>
+            <div class="bucket bucket-left" id="leftBucket"></div>
+            <div class="bucket bucket-right" id="rightBucket"></div>
+            <div class="drop-zone left" id="leftZone"></div>
+            <div class="drop-zone right" id="rightZone"></div>
+        </div>
+
+        <div class="masses-container" id="massesContainer">
+            <div class="masses-label">🎈 Available Masses - Drag to Buckets</div>
+            <div class="mass mass-1kg" data-weight="1">1kg</div>
+            <div class="mass mass-2kg" data-weight="2">2kg</div>
+            <div class="mass mass-3kg" data-weight="3">3kg</div>
+            <div class="mass mass-5kg" data-weight="5">5kg</div>
+            <div class="mass mass-10kg" data-weight="10">10kg</div>
+            <div class="mass mass-1kg" data-weight="1">1kg</div>
+            <div class="mass mass-2kg" data-weight="2">2kg</div>
+            <div class="mass mass-3kg" data-weight="3">3kg</div>
+            <div class="mass mass-5kg" data-weight="5">5kg</div>
+        </div>
+
+        <div class="info-panel">
+            <div class="info-card">
+                <div class="info-title">⬅️ Left Bucket</div>
+                <div class="info-value" id="leftWeight">0 kg</div>
+            </div>
+            <div class="info-card">
+                <div class="info-title">Right Bucket ➡️</div>
+                <div class="info-value" id="rightWeight">0 kg</div>
+            </div>
+            <div class="equilibrium-status unbalanced" id="equilibriumStatus">
+                🚀 Start by placing masses in the golden buckets to see the magic!
+            </div>
+        </div>
+
+        <div class="control-panel">
+            <button class="btn reset" id="resetBtn">🔄 Reset Balance</button>
+            <button class="btn" id="autoBalanceBtn">✨ Auto Balance</button>
+        </div>
+    </div>
+
+    <script>
+        class BeamBalance {
+            constructor() {
+                this.leftMasses = [];
+                this.rightMasses = [];
+                this.draggedElement = null;
+                this.isDragging = false;
+                
+                this.beam = document.getElementById('beam');
+                this.leftBucket = document.getElementById('leftBucket');
+                this.rightBucket = document.getElementById('rightBucket');
+                this.leftZone = document.getElementById('leftZone');
+                this.rightZone = document.getElementById('rightZone');
+                this.leftWeightDisplay = document.getElementById('leftWeight');
+                this.rightWeightDisplay = document.getElementById('rightWeight');
+                this.equilibriumStatus = document.getElementById('equilibriumStatus');
+                this.resetBtn = document.getElementById('resetBtn');
+                this.autoBalanceBtn = document.getElementById('autoBalanceBtn');
+                
+                this.initEventListeners();
+                this.updateDisplay();
+            }
+
+            initEventListeners() {
+                const masses = document.querySelectorAll('.mass');
+                
+                masses.forEach(mass => {
+                    mass.addEventListener('mousedown', this.startDrag.bind(this));
+                    mass.addEventListener('touchstart', this.startDrag.bind(this), { passive: false });
+                });
+
+                document.addEventListener('mousemove', this.drag.bind(this));
+                document.addEventListener('touchmove', this.drag.bind(this), { passive: false });
+                
+                document.addEventListener('mouseup', this.endDrag.bind(this));
+                document.addEventListener('touchend', this.endDrag.bind(this));
+
+                this.resetBtn.addEventListener('click', this.reset.bind(this));
+                this.autoBalanceBtn.addEventListener('click', this.autoBalance.bind(this));
+            }
+
+            startDrag(e) {
+                e.preventDefault();
+                this.isDragging = true;
+                this.draggedElement = e.target;
+                
+                const rect = this.draggedElement.getBoundingClientRect();
+                this.offsetX = (e.clientX || e.touches[0].clientX) - rect.left;
+                this.offsetY = (e.clientY || e.touches[0].clientY) - rect.top;
+                
+                this.draggedElement.classList.add('dragging');
+                
+                this.leftZone.classList.add('highlight');
+                this.rightZone.classList.add('highlight');
+            }
+
+            drag(e) {
+                if (!this.isDragging || !this.draggedElement) return;
+                
+                e.preventDefault();
+                const clientX = e.clientX || e.touches[0].clientX;
+                const clientY = e.clientY || e.touches[0].clientY;
+                
+                this.draggedElement.style.left = (clientX - this.offsetX) + 'px';
+                this.draggedElement.style.top = (clientY - this.offsetY) + 'px';
+            }
+
+            endDrag(e) {
+                if (!this.isDragging || !this.draggedElement) return;
+                
+                const clientX = e.clientX || e.changedTouches[0].clientX;
+                const clientY = e.clientY || e.changedTouches[0].clientY;
+                
+                const dropTarget = this.getDropTarget(clientX, clientY);
+                
+                if (dropTarget) {
+                    this.placeMass(this.draggedElement, dropTarget);
+                } else {
+                    this.returnMassToContainer(this.draggedElement);
+                }
+                
+                this.cleanupDrag();
+            }
+
+            getDropTarget(x, y) {
+                const leftRect = this.leftZone.getBoundingClientRect();
+                const rightRect = this.rightZone.getBoundingClientRect();
+                
+                if (x >= leftRect.left && x <= leftRect.right && 
+                    y >= leftRect.top && y <= leftRect.bottom) {
+                    return 'left';
+                }
+                
+                if (x >= rightRect.left && x <= rightRect.right && 
+                    y >= rightRect.top && y <= rightRect.bottom) {
+                    return 'right';
+                }
+                
+                return null;
+            }
+
+            placeMass(massElement, side) {
+                const weight = parseInt(massElement.dataset.weight);
+                const newMass = massElement.cloneNode(true);
+                
+                newMass.classList.remove('dragging');
+                newMass.classList.add('placed-mass');
+                newMass.style.position = 'absolute';
+                newMass.style.left = '';
+                newMass.style.top = '';
+                newMass.style.width = '60px';
+                newMass.style.height = '60px';
+                newMass.style.fontSize = '0.9em';
+                
+                if (side === 'left') {
+                    this.leftMasses.push({ element: newMass, weight: weight });
+                    this.positionMassInBucket(newMass, 'left', this.leftMasses.length - 1);
+                    newMass.addEventListener('click', () => this.removeMass(newMass, 'left'));
+                } else {
+                    this.rightMasses.push({ element: newMass, weight: weight });
+                    this.positionMassInBucket(newMass, 'right', this.rightMasses.length - 1);
+                    newMass.addEventListener('click', () => this.removeMass(newMass, 'right'));
+                }
+                
+                document.getElementById('balanceArea').appendChild(newMass);
+                this.returnMassToContainer(massElement);
+                this.updateDisplay();
+                this.animateBuckets();
+            }
+
+            positionMassInBucket(massElement, side, index) {
+                const bucketWidth = window.innerWidth <= 768 ? 100 : 140;
+                const massSize = 60;
+                const layer = Math.floor(index / 2);
+                const position = index % 2;
+                
+                const offsetX = (position === 0 ? -15 : 15);
+                const offsetY = layer * (massSize * 0.7);
+                
+                if (side === 'left') {
+                    const bucketLeft = window.innerWidth <= 768 ? 50 : 70;
+                    massElement.style.left = (bucketLeft + bucketWidth/2 + offsetX) + 'px';
+                } else {
+                    const bucketRight = window.innerWidth <= 768 ? 50 : 70;
+                    massElement.style.right = (bucketRight + bucketWidth/2 - offsetX) + 'px';
+                }
+                
+                massElement.style.bottom = (30 + offsetY) + 'px';
+            }
+
+            removeMass(massElement, side) {
+                if (side === 'left') {
+                    this.leftMasses = this.leftMasses.filter(mass => mass.element !== massElement);
+                } else {
+                    this.rightMasses = this.rightMasses.filter(mass => mass.element !== massElement);
+                }
+                
+                massElement.style.animation = 'fadeOut 0.3s ease-out';
+                setTimeout(() => {
+                    massElement.remove();
+                    this.repositionMasses();
+                    this.updateDisplay();
+                    this.animateBuckets();
+                }, 300);
+            }
+
+            repositionMasses() {
+                this.leftMasses.forEach((mass, index) => {
+                    this.positionMassInBucket(mass.element, 'left', index);
+                });
+                
+                this.rightMasses.forEach((mass, index) => {
+                    this.positionMassInBucket(mass.element, 'right', index);
+                });
+            }
+
+            returnMassToContainer(massElement) {
+                massElement.classList.remove('dragging');
+                massElement.style.position = 'relative';
+                massElement.style.left = '';
+                massElement.style.top = '';
+            }
+
+            cleanupDrag() {
+                this.isDragging = false;
+                this.draggedElement = null;
+                this.leftZone.classList.remove('highlight');
+                this.rightZone.classList.remove('highlight');
+            }
+
+            animateBuckets() {
+                const leftTilt = Math.min(this.leftMasses.length * 2, 8);
+                const rightTilt = Math.min(this.rightMasses.length * 2, 8);
+                
+                this.leftBucket.style.transform = `rotate(${-leftTilt}deg)`;
+                this.rightBucket.style.transform = `rotate(${rightTilt}deg)`;
+            }
+
+            updateDisplay() {
+                const leftTotal = this.leftMasses.reduce((sum, mass) => sum + mass.weight, 0);
+                const rightTotal = this.rightMasses.reduce((sum, mass) => sum + mass.weight, 0);
+                
+                this.leftWeightDisplay.textContent = leftTotal + ' kg';
+                this.rightWeightDisplay.textContent = rightTotal + ' kg';
+                
+                const difference = leftTotal - rightTotal;
+                const maxRotation = 20;
+                const rotation = Math.max(-maxRotation, Math.min(maxRotation, difference * 2));
+                
+                this.beam.style.transform = `translateX(-50%) rotate(${rotation}deg)`;
+                
+                if (Math.abs(difference) <= 0.5 && leftTotal > 0 && rightTotal > 0) {
+                    this.equilibriumStatus.textContent = '🎉 Perfect Equilibrium Achieved! ⚖️';
+                    this.equilibriumStatus.className = 'equilibrium-status balanced';
+                } else if (leftTotal === 0 && rightTotal === 0) {
+                    this.equilibriumStatus.textContent = '🚀 Start by placing masses in the golden buckets!';
+                    this.equilibriumStatus.className = 'equilibrium-status unbalanced';
+                } else {
+                    const heavierSide = difference > 0 ? 'left' : 'right';
+                    const lighter = difference > 0 ? rightTotal : leftTotal;
+                    const heavier = difference > 0 ? leftTotal : rightTotal;
+                    this.equilibriumStatus.textContent = `⚠️ ${heavierSide.toUpperCase()} side is heavier (${Math.abs(difference)}kg difference)`;
+                    this.equilibriumStatus.className = 'equilibrium-status unbalanced';
+                }
+            }
+
+            autoBalance() {
+                this.reset();
+                
+                setTimeout(() => {
+                    // Add 5kg to left
+                    const mass5kg = document.querySelector('.mass-5kg');
+                    if (mass5kg) {
+                        this.placeMass(mass5kg, 'left');
+                    }
+                    
+                    setTimeout(() => {
+                        // Add 2kg + 3kg to right
+                        const mass2kg = document.querySelector('.mass-2kg');
+                        const mass3kg = document.querySelector('.mass-3kg');
+                        if (mass2kg) this.placeMass(mass2kg, 'right');
+                        setTimeout(() => {
+                            if (mass3kg) this.placeMass(mass3kg, 'right');
+                        }, 500);
+                    }, 500);
+                }, 500);
+            }
+
+            reset() {
+                this.leftMasses.forEach(mass => {
+                    mass.element.style.animation = 'fadeOut 0.3s ease-out';
+                    setTimeout(() => mass.element.remove(), 300);
+                });
+                this.rightMasses.forEach(mass => {
+                    mass.element.style.animation = 'fadeOut 0.3s ease-out';
+                    setTimeout(() => mass.element.remove(), 300);
+                });
+                
+                this.leftMasses = [];
+                this.rightMasses = [];
+                
+                this.leftBucket.style.transform = 'rotate(0deg)';
+                this.rightBucket.style.transform = 'rotate(0deg)';
+                
+                setTimeout(() => this.updateDisplay(), 300);
+            }
+        }
+
+        // Add fadeOut animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeOut {
+                from { opacity: 1; transform: scale(1); }
+                to { opacity: 0; transform: scale(0.5); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            new BeamBalance();
+        });
+    </script>
+</body>
+</html>

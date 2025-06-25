@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Networking Course Simulation</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        .title {
+            color: white;
+            font-size: 3em;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.4);
+            text-align: center;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.2em;
+            font-weight: 300;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 30px;
+            padding: 40px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.2);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.3);
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .network-area {
+            position: relative;
+            height: 500px;
+            margin: 40px 0;
+            background: linear-gradient(180deg, #e3f2fd 0%, #f8f9fa 100%);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: inset 0 4px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .device {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border-radius: 10px;
+            cursor: grab;
+            z-index: 5;
+            box-shadow: 
+                0 8px 16px rgba(0,0,0,0.3),
+                inset 0 4px 8px rgba(255,255,255,0.3),
+                inset 0 -4px 8px rgba(0,0,0,0.2);
+            border: 3px solid rgba(255,255,255,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            transition: transform 0.1s ease;
+            font-size: 0.8em;
+            text-align: center;
+        }
+
+        .router { background: linear-gradient(135deg, #4CAF50, #66BB6A); }
+        .switch { background: linear-gradient(135deg, #2196F3, #42A5F5); }
+        .pc { background: linear-gradient(135deg, #FF6B6B, #FF8E8E); }
+
+        .device:hover {
+            transform: scale(1.05);
+            filter: brightness(1.1);
+        }
+
+        .device:active {
+            cursor: grabbing;
+        }
+
+        .device.dragging {
+            z-index: 1000;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+
+        .connection {
+            position: absolute;
+            background: linear-gradient(to bottom, #333, #666);
+            transform-origin: top left;
+            z-index: 1;
+            border-radius: 1px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .packet {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: rgba(255, 107, 107, 0.8);
+            border-radius: 50%;
+            z-index: 2;
+            transition: all 0.1s ease;
+        }
+
+        .controls-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+            padding: 30px;
+            background: linear-gradient(135deg, rgba(240, 248, 255, 0.8), rgba(230, 244, 255, 0.9));
+            border-radius: 25px;
+            border: 3px dashed #4682B4;
+            box-shadow: inset 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .control-group {
+            background: linear-gradient(135deg, white, #f8f9fa);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.5);
+            transition: transform 0.3s ease;
+        }
+
+        .control-group:hover {
+            transform: translateY(-2px);
+        }
+
+        .control-label {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #2c3e50;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 1em;
+            margin-top: 5px;
+        }
+
+        .info-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+            padding: 25px;
+            background: linear-gradient(135deg, rgba(240, 248, 255, 0.6), rgba(230, 244, 255, 0.8));
+            border-radius: 20px;
+            box-shadow: inset 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .info-card {
+            background: linear-gradient(135deg, white, #f8f9fa);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.5);
+            transition: transform 0.3s ease;
+        }
+
+        .info-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .info-title {
+            font-size: 1em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #2c3e50;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .info-value {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #3498db;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .control-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 30px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        .btn.play {
+            background: linear-gradient(135deg, #4CAF50, #66BB6A);
+        }
+
+        .btn.pause {
+            background: linear-gradient(135deg, #FF9800, #FFB74D);
+        }
+
+        .btn.reset {
+            background: linear-gradient(135deg, #FF6B6B, #FF8E8E);
+        }
+
+        .instructions {
+            background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(248,249,250,0.9));
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .instructions h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .instructions p {
+            color: #5a6c7d;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .network-area {
+                height: 400px;
+            }
+            
+            .title {
+                font-size: 2.2em;
+            }
+            
+            .controls-panel {
+                grid-template-columns: 1fr;
+            }
+            
+            .control-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+
+        .signal-glow {
+            animation: signalPulse 0.4s linear;
+        }
+        @keyframes signalPulse {
+            0% { opacity: 0.7; transform: scale(0.7); }
+            50% { opacity: 1; transform: scale(1.2); }
+            100% { opacity: 0; transform: scale(0.7); }
+        }
+    </style>
+</head>
+<body>
+    <h1 class="title">🌐 Networking Simulation</h1>
+    <h2 class="subtitle">Interactive ICT Network Topology</h2>
+    
+    <div class="container">
+        <div class="instructions">
+            <h3>🎯 How to Use</h3>
+            <p>🖱️ <strong>Drag devices</strong> to arrange routers, switches, and PCs in the network area.</p>
+            <p>🔌 <strong>Click two devices</strong> to create or remove connections between them.</p>
+            <p>⚙️ <strong>Configure IP addresses</strong> for devices to enable communication.</p>
+            <p>📡 <strong>Send packets</strong> to observe data flow and network status.</p>
+        </div>
+
+        <div class="network-area" id="networkArea">
+            <div class="device router" id="router1" data-type="router" style="left: 100px; top: 100px;">Router 1</div>
+            <div class="device switch" id="switch1" data-type="switch" style="left: 300px; top: 200px;">Switch 1</div>
+            <div class="device pc" id="pc1" data-type="pc" style="left: 200px; top: 300px;">PC 1</div>
+            <div class="device pc" id="pc2" data-type="pc" style="left: 400px; top: 300px;">PC 2</div>
+        </div>
+
+        <div class="controls-panel">
+            <div class="control-group">
+                <div class="control-label">🌐 Selected Device</div>
+                <div class="slider-container">
+                    <div id="selectedDevice">None</div>
+                    <input type="text" class="input-field" id="ipInput" placeholder="Enter IP (e.g., 192.168.1.1)">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">📤 Packet Source</div>
+                <div class="slider-container">
+                    <select class="input-field" id="packetSource">
+                        <option value="">Select Source</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">📥 Packet Destination</div>
+                <div class="slider-container">
+                    <select class="input-field" id="packetDest">
+                        <option value="">Select Destination</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <div class="info-card">
+                <div class="info-title">🔌 Connections</div>
+                <div class="info-value" id="connectionCount">0</div>
+            </div>
+            <div class="info-card">
+                <div class="info-title">📡 Packets Sent</div>
+                <div class="info-value" id="packetCount">0</div>
+            </div>
+            <div class="info-card">
+                <div class="info-title">✅ Success Rate</div>
+                <div class="info-value" id="successRate">0%</div>
+            </div>
+            <div class="info-card">
+                <div class="info-title">⚠️ Network Status</div>
+                <div class="info-value" id="networkStatus">Idle</div>
+            </div>
+        </div>
+
+        <div class="control-buttons">
+            <button class="btn play" id="sendPacketBtn">📤 Send Packet</button>
+            <button class="btn reset" id="resetBtn">🔄 Reset</button>
+        </div>
+    </div>
+
+    <script>
+        class NetworkSimulation {
+            constructor() {
+                this.networkArea = document.getElementById('networkArea');
+                this.devices = document.querySelectorAll('.device');
+                this.connections = [];
+                this.packets = [];
+                this.selectedDevice = null;
+                this.packetCount = 0;
+                this.successfulPackets = 0;
+                
+                this.initDevices();
+                this.initEventListeners();
+                this.updateDisplay();
+            }
+
+            initDevices() {
+                this.deviceMap = new Map();
+                this.devices.forEach(device => {
+                    const id = device.id;
+                    this.deviceMap.set(id, {
+                        element: device,
+                        type: device.dataset.type,
+                        ip: null,
+                        x: parseFloat(device.style.left),
+                        y: parseFloat(device.style.top),
+                        connections: new Set()
+                    });
+                    this.updateSelectOptions();
+                });
+            }
+
+            initEventListeners() {
+                this.devices.forEach(device => {
+                    device.addEventListener('mousedown', this.startDrag.bind(this));
+                    device.addEventListener('touchstart', this.startDrag.bind(this), { passive: false });
+                    device.addEventListener('click', this.selectDevice.bind(this));
+                });
+
+                document.addEventListener('mousemove', this.drag.bind(this));
+                document.addEventListener('touchmove', this.drag.bind(this), { passive: false });
+                document.addEventListener('mouseup', this.endDrag.bind(this));
+                document.addEventListener('touchend', this.endDrag.bind(this));
+
+                const ipInput = document.getElementById('ipInput');
+                ipInput.addEventListener('change', (e) => {
+                    if (this.selectedDevice) {
+                        this.deviceMap.get(this.selectedDevice).ip = e.target.value;
+                    }
+                });
+                ipInput.addEventListener('blur', (e) => {
+                    if (this.selectedDevice) {
+                        this.deviceMap.get(this.selectedDevice).ip = e.target.value;
+                    }
+                });
+                ipInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && this.selectedDevice) {
+                        this.deviceMap.get(this.selectedDevice).ip = e.target.value;
+                    }
+                });
+
+                document.getElementById('sendPacketBtn').addEventListener('click', () => this.sendPacket());
+                document.getElementById('resetBtn').addEventListener('click', () => this.reset());
+
+                window.addEventListener('resize', () => this.updateConnections());
+            }
+
+            startDrag(e) {
+                e.preventDefault();
+                this.draggingDevice = e.target;
+                this.draggingDevice.classList.add('dragging');
+                
+                const rect = this.networkArea.getBoundingClientRect();
+                this.dragOffset = {
+                    x: e.clientX - parseFloat(this.draggingDevice.style.left),
+                    y: e.clientY - parseFloat(this.draggingDevice.style.top)
+                };
+            }
+
+            drag(e) {
+                if (!this.draggingDevice) return;
+                e.preventDefault();
+
+                const clientX = e.clientX || e.touches[0].clientX;
+                const clientY = e.clientY || e.touches[0].clientY;
+                
+                const rect = this.networkArea.getBoundingClientRect();
+                let x = clientX - this.dragOffset.x - rect.left;
+                let y = clientY - this.dragOffset.y - rect.top;
+
+                x = Math.max(0, Math.min(rect.width - 60, x));
+                y = Math.max(0, Math.min(rect.height - 60, y));
+
+                this.draggingDevice.style.left = x + 'px';
+                this.draggingDevice.style.top = y + 'px';
+
+                const deviceInfo = this.deviceMap.get(this.draggingDevice.id);
+                deviceInfo.x = x;
+                deviceInfo.y = y;
+
+                this.updateConnections();
+                this.drawConnections();
+            }
+
+            endDrag() {
+                if (this.draggingDevice) {
+                    this.draggingDevice.classList.remove('dragging');
+                    this.draggingDevice = null;
+                }
+            }
+
+            selectDevice(e) {
+                const deviceId = e.target.id;
+                const ipInput = document.getElementById('ipInput');
+                if (this.selectedDevice && this.selectedDevice !== deviceId) {
+                    this.deviceMap.get(this.selectedDevice).ip = ipInput.value;
+                }
+                if (this.selectedDevice === deviceId) {
+                    this.toggleConnection(deviceId);
+                    this.selectedDevice = null;
+                    document.getElementById('selectedDevice').textContent = 'None';
+                    ipInput.value = '';
+                } else if (this.selectedDevice) {
+                    this.toggleConnection(deviceId);
+                    this.selectedDevice = null;
+                    document.getElementById('selectedDevice').textContent = 'None';
+                    ipInput.value = '';
+                } else {
+                    this.selectedDevice = deviceId;
+                    const deviceInfo = this.deviceMap.get(deviceId);
+                    document.getElementById('selectedDevice').textContent = deviceInfo.element.textContent;
+                    ipInput.value = deviceInfo.ip || '';
+                }
+            }
+
+            toggleConnection(deviceId2) {
+                const device1Id = this.selectedDevice;
+                const device2Id = deviceId2;
+
+                const connKey = [device1Id, device2Id].sort().join('-');
+                const connIndex = this.connections.findIndex(c => c.key === connKey);
+
+                if (connIndex === -1) {
+                    this.connections.push({ key: connKey, from: device1Id, to: device2Id });
+                    this.deviceMap.get(device1Id).connections.add(device2Id);
+                    this.deviceMap.get(device2Id).connections.add(device1Id);
+                } else {
+                    this.connections.splice(connIndex, 1);
+                    this.deviceMap.get(device1Id).connections.delete(device2Id);
+                    this.deviceMap.get(device2Id).connections.delete(device1Id);
+                }
+
+                this.clearConnections();
+                this.drawConnections();
+                this.updateDisplay();
+            }
+
+            drawConnections() {
+                this.connections.forEach(conn => {
+                    const from = this.deviceMap.get(conn.from);
+                    const to = this.deviceMap.get(conn.to);
+
+                    const x1 = from.x + 30;
+                    const y1 = from.y + 30;
+                    const x2 = to.x + 30;
+                    const y2 = to.y + 30;
+
+                    const length = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+                    const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+
+                    const connection = document.createElement('div');
+                    connection.className = 'connection';
+                    connection.style.width = length + 'px';
+                    connection.style.height = '2px';
+                    connection.style.left = x1 + 'px';
+                    connection.style.top = y1 + 'px';
+                    connection.style.transform = `rotate(${angle}deg)`;
+                    connection.dataset.key = conn.key;
+
+                    this.networkArea.appendChild(connection);
+                });
+            }
+
+            clearConnections() {
+                document.querySelectorAll('.connection').forEach(conn => conn.remove());
+            }
+
+            updateSelectOptions() {
+                const sourceSelect = document.getElementById('packetSource');
+                const destSelect = document.getElementById('packetDest');
+
+                sourceSelect.innerHTML = '<option value="">Select Source</option>';
+                destSelect.innerHTML = '<option value="">Select Destination</option>';
+
+                this.deviceMap.forEach((device, id) => {
+                    if (device.type === 'pc') {
+                        const option1 = document.createElement('option');
+                        option1.value = id;
+                        option1.textContent = device.element.textContent;
+                        sourceSelect.appendChild(option1);
+
+                        const option2 = document.createElement('option');
+                        option2.value = id;
+                        option2.textContent = device.element.textContent;
+                        destSelect.appendChild(option2);
+                    }
+                });
+            }
+
+            sendPacket() {
+                const sourceId = document.getElementById('packetSource').value;
+                const destId = document.getElementById('packetDest').value;
+
+                if (!sourceId || !destId || sourceId === destId) return;
+
+                const source = this.deviceMap.get(sourceId);
+                const dest = this.deviceMap.get(destId);
+
+                if (!source.ip || !dest.ip) {
+                    document.getElementById('networkStatus').textContent = 'Missing IP';
+                    return;
+                }
+
+                const path = this.findPath(sourceId, destId);
+                if (!path) {
+                    document.getElementById('networkStatus').textContent = 'No Path';
+                    this.packetCount++;
+                    this.updateDisplay();
+                    return;
+                }
+
+                this.packetCount++;
+                document.getElementById('networkStatus').textContent = 'Sending Packet';
+
+                let currentStep = 0;
+                const packet = document.createElement('div');
+                packet.className = 'packet';
+                this.networkArea.appendChild(packet);
+                this.packets.push(packet);
+
+                // Helper to animate signal along a cable
+                const animateSignal = (from, to, duration = 400) => {
+                    const signal = document.createElement('div');
+                    signal.className = 'signal-glow';
+                    this.networkArea.appendChild(signal);
+                    // Start at from
+                    const x1 = from.x + 30;
+                    const y1 = from.y + 30;
+                    const x2 = to.x + 30;
+                    const y2 = to.y + 30;
+                    signal.style.left = x1 + 'px';
+                    signal.style.top = y1 + 'px';
+                    signal.style.width = '16px';
+                    signal.style.height = '16px';
+                    signal.style.position = 'absolute';
+                    signal.style.borderRadius = '50%';
+                    signal.style.pointerEvents = 'none';
+                    signal.style.zIndex = 10;
+                    signal.style.boxShadow = '0 0 16px 8px #ffeb3b, 0 0 32px 16px #fff70055';
+                    signal.style.background = 'radial-gradient(circle, #fff700 60%, #ffeb3b 100%)';
+                    // Animate
+                    let start = null;
+                    return new Promise(resolve => {
+                        function step(ts) {
+                            if (!start) start = ts;
+                            let t = Math.min(1, (ts - start) / duration);
+                            const x = x1 + (x2 - x1) * t;
+                            const y = y1 + (y2 - y1) * t;
+                            signal.style.left = (x - 8) + 'px';
+                            signal.style.top = (y - 8) + 'px';
+                            if (t < 1) {
+                                requestAnimationFrame(step);
+                            } else {
+                                signal.remove();
+                                resolve();
+                            }
+                        }
+                        requestAnimationFrame(step);
+                    });
+                };
+
+                // Animate packet and signal along the path
+                const animatePath = async () => {
+                    for (let i = 0; i < path.length - 1; i++) {
+                        const from = this.deviceMap.get(path[i]);
+                        const to = this.deviceMap.get(path[i + 1]);
+                        // Animate signal
+                        await animateSignal(from, to, 400);
+                        // Animate packet
+                        await new Promise(resolve => {
+                            let start = null;
+                            function step(ts) {
+                                if (!start) start = ts;
+                                let t = Math.min(1, (ts - start) / 400);
+                                const x = from.x + 30 + (to.x - from.x) * t;
+                                const y = from.y + 30 + (to.y - from.y) * t;
+                                packet.style.left = x + 'px';
+                                packet.style.top = y + 'px';
+                                if (t < 1) {
+                                    requestAnimationFrame(step);
+                                } else {
+                                    resolve();
+                                }
+                            }
+                            requestAnimationFrame(step);
+                        });
+                    }
+                    packet.remove();
+                    this.packets = this.packets.filter(p => p !== packet);
+                    this.successfulPackets++;
+                    document.getElementById('networkStatus').textContent = 'Packet Delivered';
+                    this.updateDisplay();
+                };
+
+                animatePath();
+            }
+
+            findPath(sourceId, targetId) {
+                const visited = new Set();
+                const queue = [[sourceId]];
+                visited.add(sourceId);
+
+                while (queue.length > 0) {
+                    const path = queue.shift();
+                    const currentId = path[0];
+
+                    if (currentId === targetId) {
+                        return path.reverse();
+                    }
+
+                    const current = this.deviceMap.get(currentId);
+                    for (let neighborId of current.connections) {
+                        if (!visited.has(neighborId)) {
+                            visited.add(neighborId);
+                            queue.push([neighborId, ...path]);
+                        }
+                    }
+                }
+
+                return null;
+            }
+
+            updateDisplay() {
+                document.getElementById('connectionCount').textContent = this.connections.length;
+                document.getElementById('packetCount').textContent = this.packetCount;
+                document.getElementById('successRate').textContent = this.packetCount > 0 ? 
+                    ((this.successfulPackets / this.packetCount) * 100).toFixed(1) + '%' : null;
+            }
+
+            reset() {
+                this.connections = [];
+                this.packets.forEach(p => p.remove());
+                this.packets = [];
+                this.packetCount = 0;
+                this.successfulPackets = 0;
+                this.selectedDevice = null;
+                this.deviceMap.forEach(device => {
+                    device.ip = null;
+                    device.connections = new Set();
+                });
+                this.clearConnections();
+                document.getElementById('selectedDevice').textContent = 'None';
+                document.getElementById('ipInput').value = '';
+                document.getElementById('packetSource').value = '';
+                document.getElementById('packetDest').value = '';
+                document.getElementById('networkStatus').textContent = 'Idle';
+                this.updateDisplay();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            new NetworkSimulation();
+        });
+    </script>
+</body>
+</html>
