@@ -25,3 +25,21 @@ git clone https://github.com/vizziona/learnSphere.git
 cd learnSphere
 npm install
 npm start
+
+```
+
+## THANKS AND APPRECIATION
+
+We truly Appreciate University of Rwanda for Giving us Space and Opportunity to start this, and we believe this is gate to open thinkers to bring new big changes here in 
+Web AR and build Tech World we wish . Thanks.
+
+## TEAM 
+
+1. NDAYISHIMIYE Bonheur
+   Email: ndayibonheur06@gmail.com
+2. UWINEZA Ange Marie
+   Email: uwineza.angemarie@gmail.com
+3. UWIBAMBE Sandrine
+    Email: uwibambesandrine@gmail.com
+
+         😍🧑‍💻
