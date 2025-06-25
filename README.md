@@ -1,5 +1,7 @@
 # 🌐 LearnSphere – ICT & Physics
 
+![Screenshot](screenshot.png)
+
 An open-source Web Augmented Reality (WebAR) project designed to bring STEM education to life! This tool allows students and educators to explore Physics and ICT simulations directly in their browser using WebXR.
 
 ## 🔬 What It Offers
